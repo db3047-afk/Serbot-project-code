@@ -15,25 +15,3 @@ Smart Obstacle Detection: Uses an ultrasonic sensor to detect and bypass objects
 Smooth Motor Control: Controlled using TB6612FNG motor driver with PWM signals.
 
 Fully Compatible: Works on the ESP32 development board.
-
-🧠 Working Principle
-
-Line Following:
-
-Two IR sensors detect the path (usually a black line on a white surface).
-
-If both sensors detect black → move forward.
-
-If left sensor on black → turn left.
-
-If right sensor on black → turn right.
-
-If both on white → stop.
-
-Obstacle Avoidance:
-
-Ultrasonic sensor continuously measures distance in front.
-
-If an obstacle is detected within 15 cm, robot stops and checks alternate paths (left and right).
-
-Chooses the side with more clearance and maneuvers around the obstacle.
