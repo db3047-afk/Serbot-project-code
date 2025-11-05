@@ -1,0 +1,193 @@
+// -------------------------------------------------------
+// ESP32 Line Follower + Obstacle Avoider
+// Using TB6612FNG + 2 IR Sensors + Ultrasonic
+// Final Code 
+// -------------------------------------------------------
+
+#include <Arduino.h>
+
+// ==== MOTOR DRIVER PINS (TB6612FNG) ====
+#define MOTOR_A_PWM 33
+#define MOTOR_A_IN1 25
+#define MOTOR_A_IN2 26
+
+#define MOTOR_B_PWM 13
+#define MOTOR_B_IN1 14
+#define MOTOR_B_IN2 12
+
+#define MOTOR_STBY 27
+
+// ==== IR SENSOR PINS ====
+#define IR_LEFT 35
+#define IR_RIGHT 32
+
+// ==== ULTRASONIC SENSOR PINS ====
+#define TRIG_PIN 5
+#define ECHO_PIN 18
+
+// ==== CONSTANTS ====
+#define MAX_DISTANCE 20
+#define SPEED 80
+#define TURN_SPEED 100
+
+int leftDistance = 0;
+int rightDistance = 0;
+bool objectDetected = false;
+
+// --- MOTOR CONTROL HELPERS ---
+void moveForward();
+void moveBackward();
+void moveLeft();
+void moveRight();
+void stopMotors();
+
+// ---- FUNCTION DECLARATIONS ----
+int getDistance();
+void objectAvoid();
+int lookLeft();
+int lookRight();
+void performTurn(bool leftTurn);
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(IR_LEFT, INPUT);
+  pinMode(IR_RIGHT, INPUT);
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  pinMode(MOTOR_A_IN1, OUTPUT);
+  pinMode(MOTOR_A_IN2, OUTPUT);
+  pinMode(MOTOR_B_IN1, OUTPUT);
+  pinMode(MOTOR_B_IN2, OUTPUT);
+  pinMode(MOTOR_STBY, OUTPUT);
+
+  digitalWrite(MOTOR_STBY, HIGH);
+  delay(500);
+}
+
+// ---- MAIN LOOP ----
+void loop() {
+  int leftIR = digitalRead(IR_LEFT);
+  int rightIR = digitalRead(IR_RIGHT);
+
+  objectAvoid();  // Check for obstacle before line tracking
+
+  if (leftIR == LOW && rightIR == LOW) {
+    moveForward();
+  } 
+  else if (leftIR == LOW && rightIR == HIGH) {
+    moveLeft();
+  } 
+  else if (leftIR == HIGH && rightIR == LOW) {
+    moveRight();
+  } 
+  else {
+    stopMotors();
+  }
+}
+
+// ---- OBSTACLE AVOIDANCE ----
+void objectAvoid() {
+  int dist = getDistance();
+
+  if (dist <= 15) {
+    stopMotors();
+    delay(300);
+
+    // Simulated left and right scanning (no servo)
+    Serial.println("Checking left and right paths...");
+
+    leftDistance = getDistance();
+    delay(200);
+    rightDistance = getDistance();
+    delay(200);
+
+    if (rightDistance <= leftDistance) {
+      objectDetected = true;
+      performTurn(true); // Left
+    } else {
+      objectDetected = false;
+      performTurn(false); // Right
+    }
+  }
+}
+
+// ---- ULTRASONIC ----
+int getDistance() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duration = pulseIn(ECHO_PIN, HIGH, 20000);
+  int distance = duration * 0.034 / 2;
+  if (distance == 0) distance = 100;
+  return distance;
+}
+
+void performTurn(bool leftTurn) {
+  if (leftTurn) {
+    moveLeft();
+    delay(700);
+    moveForward();
+    delay(800);
+    moveRight();
+    delay(900);
+  } else {
+    moveRight();
+    delay(700);
+    moveForward();
+    delay(800);
+    moveLeft();
+    delay(900);
+  }
+}
+
+// ---- MOTOR FUNCTIONS ----
+void moveForward() {
+  digitalWrite(MOTOR_A_IN1, HIGH);
+  digitalWrite(MOTOR_A_IN2, LOW);
+  digitalWrite(MOTOR_B_IN1, HIGH);
+  digitalWrite(MOTOR_B_IN2, LOW);
+  analogWrite(MOTOR_A_PWM, SPEED);
+  analogWrite(MOTOR_B_PWM, SPEED);
+}
+
+void moveBackward() {
+  digitalWrite(MOTOR_A_IN1, LOW);
+  digitalWrite(MOTOR_A_IN2, HIGH);
+  digitalWrite(MOTOR_B_IN1, LOW);
+  digitalWrite(MOTOR_B_IN2, HIGH);
+  analogWrite(MOTOR_A_PWM, SPEED);
+  analogWrite(MOTOR_B_PWM, SPEED);
+}
+
+void moveLeft() {
+  digitalWrite(MOTOR_A_IN1, LOW);
+  digitalWrite(MOTOR_A_IN2, HIGH);
+  digitalWrite(MOTOR_B_IN1, HIGH);
+  digitalWrite(MOTOR_B_IN2, LOW);
+  analogWrite(MOTOR_A_PWM, TURN_SPEED);
+  analogWrite(MOTOR_B_PWM, TURN_SPEED);
+}
+
+void moveRight() {
+  digitalWrite(MOTOR_A_IN1, HIGH);
+  digitalWrite(MOTOR_A_IN2, LOW);
+  digitalWrite(MOTOR_B_IN1, LOW);
+  digitalWrite(MOTOR_B_IN2, HIGH);
+  analogWrite(MOTOR_A_PWM, TURN_SPEED);
+  analogWrite(MOTOR_B_PWM, TURN_SPEED);
+}
+
+void stopMotors() {
+  digitalWrite(MOTOR_A_IN1, LOW);
+  digitalWrite(MOTOR_A_IN2, LOW);
+  digitalWrite(MOTOR_B_IN1, LOW);
+  digitalWrite(MOTOR_B_IN2, LOW);
+  analogWrite(MOTOR_A_PWM, 0);
+  analogWrite(MOTOR_B_PWM, 0);
+}
